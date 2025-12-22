@@ -897,18 +897,18 @@ LOG_CHAT_ID = "@frozenmusiclogs"
 async def fallback_local_playback(chat_id: int, message: Message, song_info: dict):
     playback_mode[chat_id] = "local"
     try:
-        # Cancel any existing playback task
+        
         if chat_id in playback_tasks:
             playback_tasks[chat_id].cancel()
 
-        # Validate URL
+        
         video_url = song_info.get("url")
         if not video_url:
             print(f"Invalid video URL for song: {song_info}")
             chat_containers[chat_id].pop(0)
             return
 
-        # Notify
+        
         try:
             await message.edit(f"Starting local playback for ⚡ {song_info['title']}...")
         except Exception:
@@ -917,15 +917,15 @@ async def fallback_local_playback(chat_id: int, message: Message, song_info: dic
                 f"Starting local playback for ⚡ {song_info['title']}..."
             )
 
-        # Download & play locally
+        
         media_path = await vector_transport_resolver(video_url)
         await call_py.play(
             chat_id,
-            MediaStream(media_path)
+            MediaStream(media_path, video_flags=MediaStream.Flags.IGNORE)
         )
         playback_tasks[chat_id] = asyncio.current_task()
 
-        # Prepare caption & keyboard
+        
         total_duration = parse_duration_str(song_info.get("duration", "0:00"))
         one_line = _one_line_title(song_info["title"])
         base_caption = (
@@ -946,7 +946,7 @@ async def fallback_local_playback(chat_id: int, message: Message, song_info: dic
         progress_button = InlineKeyboardButton(text=initial_progress, callback_data="progress")
         base_keyboard = InlineKeyboardMarkup([control_row, [progress_button]])
 
-        # Use raw thumbnail if available
+        
         thumb_url = song_info.get("thumbnail")
         progress_message = await message.reply_photo(
             photo=thumb_url,
@@ -955,10 +955,10 @@ async def fallback_local_playback(chat_id: int, message: Message, song_info: dic
             parse_mode=ParseMode.HTML
         )
 
-        # Remove "processing" message
+        
         await message.delete()
 
-        # Kick off progress updates
+        
         asyncio.create_task(
             update_progress_caption(
                 chat_id,
@@ -969,7 +969,7 @@ async def fallback_local_playback(chat_id: int, message: Message, song_info: dic
             )
         )
 
-        # Log start
+        
         asyncio.create_task(
             bot.send_message(
                 LOG_CHAT_ID,
